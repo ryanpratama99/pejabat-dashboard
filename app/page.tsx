@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import {
+  Users,
+  BadgeCheck,
+  AlertTriangle,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -21,68 +25,32 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [sertifikasi, setSertifikasi] = useState(0);
   const [belum, setBelum] = useState(0);
+  const [lastUpdate, setLastUpdate] = useState("");
 
   const [topKppn, setTopKppn] = useState<RankItem[]>([]);
   const [topKl, setTopKl] = useState<RankItem[]>([]);
+  const [topUsulan, setTopUsulan] = useState<RankItem[]>([]);
 
   useEffect(() => {
-    fetch("/data.xlsx")
-      .then((res) => res.arrayBuffer())
-      .then((ab) => {
-        const wb = XLSX.read(ab);
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const data: any[] = XLSX.utils.sheet_to_json(sheet);
+    fetch("/api/dashboard")
+      .then((res) => res.json())
+      .then((data) => {
+        setTotal(data.total || 0);
+        setSertifikasi(data.sertifikasi || 0);
+        setBelum(data.belum || 0);
 
-        setTotal(data.length);
+        setTopKppn(data.topKppn || []);
+        setTopKl(data.topKl || []);
+        setTopUsulan(data.topUsulan || []);
 
-        const tersertifikasiData = data.filter(
-          (row) =>
-            String(row["STSCERT"]).trim() ===
-            "Tersertifikasi"
-        );
-
-        const belumData = data.filter(
-          (row) =>
-            String(row["STSCERT"]).trim() ===
-            "Belum Tersertifikasi"
-        );
-
-        setSertifikasi(tersertifikasiData.length);
-        setBelum(belumData.length);
-
-        // TOP KPPN
-        const groupKppn: Record<string, number> = {};
-
-        belumData.forEach((row) => {
-          const nama = String(row["NMKPPN"] || "").trim();
-          if (!nama) return;
-
-          groupKppn[nama] = (groupKppn[nama] || 0) + 1;
+        const formatted = new Date(
+          data.updatedAt
+        ).toLocaleString("id-ID", {
+          dateStyle: "long",
+          timeStyle: "short",
         });
 
-        const rankingKppn = Object.entries(groupKppn)
-          .map(([nama, jumlah]) => ({ nama, jumlah }))
-          .sort((a, b) => b.jumlah - a.jumlah)
-          .slice(0, 5);
-
-        setTopKppn(rankingKppn);
-
-        // TOP KL
-        const groupKl: Record<string, number> = {};
-
-        belumData.forEach((row) => {
-          const nama = String(row["NAMA KL"] || "").trim();
-          if (!nama) return;
-
-          groupKl[nama] = (groupKl[nama] || 0) + 1;
-        });
-
-        const rankingKl = Object.entries(groupKl)
-          .map(([nama, jumlah]) => ({ nama, jumlah }))
-          .sort((a, b) => b.jumlah - a.jumlah)
-          .slice(0, 5);
-
-        setTopKl(rankingKl);
+        setLastUpdate(formatted);
       });
   }, []);
 
@@ -92,7 +60,7 @@ export default function Home() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-8 gap-4">
         <div>
           <p className="text-sm uppercase tracking-widest text-blue-600 font-semibold">
-            pejabat-perbendaharaan.info
+            DIREKTORAT SISTEM PERBENDAHARAAN
           </p>
 
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mt-2">
@@ -100,7 +68,7 @@ export default function Home() {
           </h1>
 
           <p className="text-slate-500 mt-2">
-            Monitoring nasional sertifikasi pejabat perbendaharaan
+            Monitoring sertifikasi pejabat perbendaharaan
           </p>
         </div>
 
@@ -110,73 +78,179 @@ export default function Home() {
           </p>
 
           <p className="font-semibold text-slate-800">
-            {new Date().toLocaleString("id-ID", {
-              dateStyle: "long",
-              timeStyle: "short",
-            })}{" "}
-            WIB
+            {lastUpdate} WIB
           </p>
         </div>
       </div>
 
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
         <KpiCard
           title="Total Pejabat"
           value={total}
+          subtitle="100% populasi data"
+          icon={<Users size={22} />}
           color="from-slate-800 to-slate-700"
         />
 
         <KpiCard
           title="Tersertifikasi"
           value={sertifikasi}
+          subtitle={`${
+            total
+              ? (
+                  (sertifikasi / total) *
+                  100
+                ).toLocaleString("id-ID", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })
+              : "0,0"
+          }% dari total pejabat`}
+          icon={<BadgeCheck size={22} />}
           color="from-blue-600 to-blue-500"
         />
 
         <KpiCard
           title="Belum Sertifikasi"
           value={belum}
+          subtitle={`${
+            total
+              ? (
+                  (belum / total) *
+                  100
+                ).toLocaleString("id-ID", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })
+              : "0,0"
+          }% dari total pejabat`}
+          icon={<AlertTriangle size={22} />}
           color="from-amber-500 to-orange-500"
         />
+
       </div>
 
-      {/* CHART + INSIGHT */}
+      {/* CHART */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+        {/* CHART KIRI */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">
-            Top 5 KPPN Belum Tersertifikasi
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            Breakdown Status Usulan
           </h2>
 
-          <div className="h-80">
+          <p className="text-sm text-slate-500 mb-4">
+            Khusus pejabat belum tersertifikasi
+          </p>
+
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topKppn}>
+              <BarChart data={topUsulan}>
+                <defs>
+                  <linearGradient
+                    id="orangeGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="#f59e0b"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="#f97316"
+                    />
+                  </linearGradient>
+                </defs>
+
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="nama" />
+
+                <XAxis
+                  dataKey="nama"
+                  interval={0}
+                  angle={-15}
+                  textAnchor="end"
+                  height={90}
+                  fontSize={12}
+                />
+
                 <YAxis />
                 <Tooltip />
+
                 <Bar
                   dataKey="jumlah"
                   radius={[10, 10, 0, 0]}
-                  fill="#2563eb"
+                  fill="url(#orangeGradient)"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
+        {/* INSIGHT */}
         <div className="bg-slate-900 text-white rounded-3xl p-6 shadow">
-          <p className="text-sm uppercase tracking-widest text-slate-400 mb-3">
+          <p className="text-sm uppercase tracking-widest text-slate-400 mb-4">
             Executive Insight
           </p>
 
-          <h3 className="text-2xl font-bold leading-snug mb-4">
-            {belum} pejabat belum tersertifikasi.
+          <h3 className="text-2xl font-bold mb-6">
+            Prioritas Tindak Lanjut
           </h3>
 
-          <p className="text-slate-300 leading-relaxed">
-            tempat buat fafifu di mari
-          </p>
+          <div className="space-y-5 text-sm leading-relaxed">
+
+            <div>
+              <p className="font-semibold text-amber-400">
+                Antrean Diklat
+              </p>
+              <p className="text-slate-300">
+                Koordinasi dengan Pusdiklat AP untuk percepatan penjadwalan pelatihan.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-blue-400">
+                Belum Rekam Usulan
+              </p>
+              <p className="text-slate-300">
+                Percepatan pendaftaran melalui Biro Keuangan K/L dan KPPN/Kanwil.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-cyan-400">
+                Dalam Verifikasi
+              </p>
+              <p className="text-slate-300">
+                Percepatan proses verifikasi oleh Admin Satker dan KPPN.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-red-400">
+                Sertifikat Kadaluarsa
+              </p>
+              <p className="text-slate-300">
+                Pengajuan pendaftaran ulang sertifikasi.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-200">
+                Tidak Direkomendasikan
+              </p>
+              <p className="text-slate-300">
+                Merekomendasikan pejabat pengganti yang memenuhi persyaratan.
+              </p>
+            </div>
+
+          </div>
         </div>
+
       </div>
 
       {/* RANKING */}
@@ -199,22 +273,38 @@ function KpiCard({
   title,
   value,
   color,
+  subtitle,
+  icon,
 }: {
   title: string;
   value: number;
   color: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <div
-      className={`bg-gradient-to-r ${color} text-white rounded-3xl p-6 shadow`}
+      className={`bg-gradient-to-r ${color} text-white rounded-3xl p-6 shadow hover:scale-[1.02] transition duration-300`}
     >
-      <p className="text-sm opacity-80">
-        {title}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm uppercase tracking-wide opacity-80">
+          {title}
+        </p>
 
-      <h2 className="text-5xl font-bold mt-3">
-        {value}
+        <div className="opacity-90">
+          {icon}
+        </div>
+      </div>
+
+      <h2 className="text-5xl font-bold mt-4">
+        {value.toLocaleString("id-ID")}
       </h2>
+
+      {subtitle && (
+        <p className="text-sm mt-3 opacity-90">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
