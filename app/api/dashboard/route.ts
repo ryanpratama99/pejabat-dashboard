@@ -120,7 +120,7 @@ export async function GET() {
       topKppn,
       topKl,
       topUsulan,
-      updatedAt: fs.statSync(filePath).mtime,
+      updatedAt: new Date(),
     });
   } catch (error: any) {
     return NextResponse.json(
