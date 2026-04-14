@@ -1,131 +1,70 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import * as XLSX from "xlsx";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET() {
   try {
-    const filePath = path.join(
-      process.cwd(),
-      "public",
-      "data.xlsx"
-    );
+    // KPI
+    const { count: total } = await supabase
+      .from("pejabat")
+      .select("*", {
+        count: "exact",
+        head: true,
+      });
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const { count: sertifikasi } =
+      await supabase
+        .from("pejabat")
+        .select("*", {
+          count: "exact",
+          head: true,
+        })
+        .eq(
+          "STSCERT",
+          "Tersertifikasi"
+        );
 
-    const workbook = XLSX.read(fileBuffer, {
-      type: "buffer",
-    });
+    const { count: belum } =
+      await supabase
+        .from("pejabat")
+        .select("*", {
+          count: "exact",
+          head: true,
+        })
+        .eq(
+          "STSCERT",
+          "Belum Tersertifikasi"
+        );
 
-    const sheet =
-      workbook.Sheets[workbook.SheetNames[0]];
+    // RANKING RPC
+    const { data: topKppn } =
+      await supabase.rpc("top_kppn");
 
-    const data: any[] =
-      XLSX.utils.sheet_to_json(sheet);
+    const { data: topKl } =
+      await supabase.rpc("top_kl");
 
-    const total = data.length;
-
-    const tersertifikasiData = data.filter(
-      (row) =>
-        String(row["STSCERT"]).trim() ===
-        "Tersertifikasi"
-    );
-
-    const belumData = data.filter(
-      (row) =>
-        String(row["STSCERT"]).trim() ===
-        "Belum Tersertifikasi"
-    );
-
-    const sertifikasi =
-      tersertifikasiData.length;
-
-    const belum = belumData.length;
-
-    // TOP KPPN
-    const groupKppn: Record<string, number> =
-      {};
-
-    belumData.forEach((row) => {
-      const nama = String(
-        row["NMKPPN"] || ""
-      ).trim();
-
-      if (!nama) return;
-
-      groupKppn[nama] =
-        (groupKppn[nama] || 0) + 1;
-    });
-
-    const topKppn = Object.entries(groupKppn)
-      .map(([nama, jumlah]) => ({
-        nama,
-        jumlah,
-      }))
-      .sort((a, b) => b.jumlah - a.jumlah)
-      .slice(0, 5);
-
-    // TOP KL
-    const groupKl: Record<string, number> = {};
-
-    belumData.forEach((row) => {
-      const nama = String(
-        row["NAMA KL"] || ""
-      ).trim();
-
-      if (!nama) return;
-
-      groupKl[nama] =
-        (groupKl[nama] || 0) + 1;
-    });
-
-    const topKl = Object.entries(groupKl)
-      .map(([nama, jumlah]) => ({
-        nama,
-        jumlah,
-      }))
-      .sort((a, b) => b.jumlah - a.jumlah)
-      .slice(0, 5);
-
-    // STATUS USULAN
-    const groupUsulan: Record<
-      string,
-      number
-    > = {};
-
-    belumData.forEach((row) => {
-      const nama = String(
-        row["STSUSULAN"] || ""
-      ).trim();
-
-      if (!nama) return;
-
-      groupUsulan[nama] =
-        (groupUsulan[nama] || 0) + 1;
-    });
-
-    const topUsulan = Object.entries(
-      groupUsulan
-    )
-      .map(([nama, jumlah]) => ({
-        nama,
-        jumlah,
-      }))
-      .sort((a, b) => b.jumlah - a.jumlah);
+    const { data: topUsulan } =
+      await supabase.rpc("top_usulan");
 
     return NextResponse.json({
-      total,
-      sertifikasi,
-      belum,
-      topKppn,
-      topKl,
-      topUsulan,
+      total: total || 0,
+      sertifikasi: sertifikasi || 0,
+      belum: belum || 0,
+      topKppn: topKppn || [],
+      topKl: topKl || [],
+      topUsulan: topUsulan || [],
       updatedAt: new Date(),
     });
   } catch (error: any) {
     return NextResponse.json(
       {
-        error: error.message,
+        error:
+          error.message ||
+          "Database error",
       },
       { status: 500 }
     );
