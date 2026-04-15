@@ -39,6 +39,7 @@ export default function Home() {
   const [kppnDetail, setKppnDetail] = useState<any>(null);
   const [showKlModal, setShowKlModal] = useState(false);
   const [klDetail, setKlDetail] = useState<any>(null);
+  const [jabatanData, setJabatanData] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -61,6 +62,15 @@ export default function Home() {
 
         setLastUpdate(formatted);
       });
+    fetch("/api/jabatan-summary")
+      .then((res) => res.json())
+      .then((data) =>
+        setJabatanData(
+          Array.isArray(data)
+            ? data
+            : []
+        )
+      );
     fetch("/api/filter-options")
       .then((res) => res.json())
       .then((data) => {
@@ -105,26 +115,29 @@ const exportKlPrioritasExcel = () => {
     !klDetail ||
     !klDetail.prioritas
   )
+
     return;
 
   const rows =
-    klDetail.prioritas.map(
-      (item: any) => ({
-        Nama: item.NAMA,
-        Jabatan:
-          item.NMJABATAN,
-        Satker:
-          item.NMSATKER,
-        Status:
-          item.STSUSULAN,
-        "K/L":
-          klDetail.nama,
-        "Tanggal Download":
-          new Date().toLocaleString(
-            "id-ID"
-          ),
-      })
-    );
+  klDetail.prioritas.map(
+    (item: any) => ({
+      Nama: item.NAMA,
+      Jabatan:
+        item.NMJABATAN,
+      Satker:
+        item.NMSATKER,
+      "Status Sertifikasi":
+        item.STSCERT,
+      "Status Usulan":
+        item.STSUSULAN,
+      "K/L":
+        klDetail.nama,
+      "Tanggal Download":
+        new Date().toLocaleString(
+          "id-ID"
+        ),
+    })
+  );
 
   const ws =
     XLSX.utils.json_to_sheet(
@@ -190,6 +203,14 @@ const exportKlPrioritasExcel = () => {
     wb,
     `Prioritas_${kppnDetail.nama}.xlsx`
   );
+};
+
+const formatNumber = (
+  value: number
+) => {
+  return new Intl.NumberFormat(
+    "id-ID"
+  ).format(value || 0);
 };
 
   return (
@@ -390,7 +411,102 @@ const exportKlPrioritasExcel = () => {
         </div>
 
       </div>
+{/* JABATAN SUMMARY */}
+<div className="bg-white rounded-3xl p-6 shadow mb-6">
 
+  <div className="mb-5">
+    <h2 className="text-xl font-bold text-slate-900">
+      Kepatuhan Sertifikasi per Jabatan
+    </h2>
+
+    <p className="text-sm text-slate-500 mt-1">
+      Perbandingan jumlah pejabat bersertifikat dan belum bersertifikat per jabatan.
+    </p>
+  </div>
+
+  <div className="overflow-hidden rounded-2xl border border-slate-200">
+
+    {/* Header */}
+    <div className="grid grid-cols-12 bg-slate-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+
+      <div className="col-span-4">
+        Jabatan
+      </div>
+
+      <div className="col-span-2 text-center">
+        Total
+      </div>
+
+      <div className="col-span-2 text-center">
+        Bersertifikat
+      </div>
+
+      <div className="col-span-2 text-center">
+        Belum
+      </div>
+
+      <div className="col-span-2 text-center">
+        Kepatuhan
+      </div>
+
+    </div>
+
+    {/* Rows */}
+    <div className="divide-y divide-slate-100">
+
+      {jabatanData.map(
+        (
+          item,
+          index
+        ) => (
+          <div
+            key={index}
+            className="grid grid-cols-12 px-4 py-4 text-sm items-center hover:bg-slate-50"
+          >
+
+            <div className="col-span-4 font-semibold text-slate-900">
+              {item.nama}
+            </div>
+
+            <div className="col-span-2 text-center">
+              {formatNumber(item.total)}
+            </div>
+
+            <div className="col-span-2 text-center text-blue-700 font-semibold">
+              {formatNumber(item.sertifikasi)}
+            </div>
+
+            <div className="col-span-2 text-center text-orange-600 font-semibold">
+              {formatNumber(item.belum)}
+            </div>
+
+            <div className="col-span-2">
+              <div className="flex flex-col gap-1">
+
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600"
+                    style={{
+                      width: `${item.persen}%`,
+                    }}
+                  />
+                </div>
+
+                <span className="text-xs text-center font-semibold text-slate-700">
+                  {item.persen}%
+                </span>
+
+              </div>
+            </div>
+
+          </div>
+        )
+      )}
+
+    </div>
+  </div>
+
+</div>
       {/* RANKING */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -449,7 +565,7 @@ const exportKlPrioritasExcel = () => {
           </div>
 
           <span className="font-bold text-slate-900">
-            {item.jumlah}
+            {formatNumber(item.jumlah)}
           </span>
         </div>
       ))}
@@ -512,7 +628,7 @@ const exportKlPrioritasExcel = () => {
           </div>
 
           <span className="font-bold text-slate-900">
-            {item.jumlah}
+            {formatNumber(item.jumlah)}
           </span>
         </div>
       ))}
@@ -557,7 +673,7 @@ const exportKlPrioritasExcel = () => {
             Total Pejabat
           </p>
           <p className="text-3xl font-bold">
-            {kppnDetail.total}
+            {formatNumber(kppnDetail.total)}
           </p>
         </div>
 
@@ -691,101 +807,24 @@ const exportKlPrioritasExcel = () => {
         </p>
       </div>
 
-      {/* PRIORITAS */}
-<div className="mb-6">
+      {/* AKSES DATA DETAIL */}
+<div className="mt-6 bg-slate-50 rounded-2xl p-4 border border-slate-200">
 
-  <div className="flex items-center justify-between gap-3 mb-3">
+  <h3 className="font-bold text-slate-900 mb-2">
+    Akses Data Detail
+  </h3>
 
-  <div>
-    <h3 className="font-bold text-slate-900">
-      Daftar Prioritas Tindak Lanjut
-    </h3>
-
-    <p className="text-sm text-slate-500">
-      Maksimal 20 data prioritas
-    </p>
-  </div>
-
-  <button
-    onClick={
-      exportPrioritasExcel
-    }
-    className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
-  >
-    Export Excel
-  </button>
-
-</div>
-
-  <p className="text-sm text-slate-500 mb-3">
-    Daftar pejabat berikut memerlukan tindak lanjut percepatan sertifikasi.
+  <p className="text-sm text-slate-500 mb-4">
+    Data individu tidak ditampilkan pada dashboard.
+    Gunakan export untuk tindak lanjut internal.
   </p>
 
-  {kppnDetail.prioritas &&
-  kppnDetail.prioritas.length > 0 ? (
-
-    <div className="overflow-hidden rounded-2xl border border-slate-200">
-
-      <div className="grid grid-cols-12 bg-slate-100 px-4 py-3 text-xs font-semibold text-slate-600 uppercase">
-
-        <div className="col-span-3">
-          Nama
-        </div>
-
-        <div className="col-span-3">
-          Jabatan
-        </div>
-
-        <div className="col-span-4">
-          Satker
-        </div>
-
-        <div className="col-span-2">
-          Status
-        </div>
-
-      </div>
-
-      <div className="divide-y divide-slate-100">
-
-        {kppnDetail.prioritas.map(
-          (item: any, index: number) => (
-            <div
-              key={index}
-              className="grid grid-cols-12 px-4 py-3 text-sm hover:bg-slate-50"
-            >
-              <div className="col-span-3 font-medium text-slate-900">
-                {item.NAMA}
-              </div>
-
-              <div className="col-span-3 text-slate-700">
-                {item.NMJABATAN}
-              </div>
-
-              <div className="col-span-4 text-slate-700">
-                {item.NMSATKER}
-              </div>
-
-              <div className="col-span-2">
-                <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-700 font-semibold">
-                  {item.STSUSULAN}
-                </span>
-              </div>
-            </div>
-          )
-        )}
-
-      </div>
-
-    </div>
-
-  ) : (
-
-    <div className="bg-slate-50 rounded-2xl p-4 text-sm text-slate-500">
-      Tidak terdapat data prioritas tindak lanjut.
-    </div>
-
-  )}
+  <button
+    onClick={exportPrioritasExcel}
+    className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+  >
+    Export Belum Bersertifikat
+  </button>
 
 </div>
 
@@ -964,106 +1003,26 @@ const exportKlPrioritasExcel = () => {
         </p>
       </div>
 
-      {/* PRIORITAS */}
-      <div className="mb-6">
+      {/* AKSES DATA DETAIL */}
+<div className="mt-6 bg-slate-50 rounded-2xl p-4 border border-slate-200">
 
-        <div className="flex items-center justify-between gap-3 mb-3">
+  <h3 className="font-bold text-slate-900 mb-2">
+    Akses Data Detail
+  </h3>
 
-  <div>
-    <h3 className="font-bold text-slate-900">
-      Daftar Prioritas Tindak Lanjut
-    </h3>
-
-    <p className="text-sm text-slate-500">
-      Maksimal 20 data prioritas
-    </p>
-  </div>
+  <p className="text-sm text-slate-500 mb-4">
+    Data individu tidak ditampilkan pada dashboard.
+    Gunakan export untuk tindak lanjut internal.
+  </p>
 
   <button
-    onClick={
-      exportKlPrioritasExcel
-    }
+    onClick={exportKlPrioritasExcel}
     className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
   >
-    Export Excel
+    Export Belum Bersertifikat
   </button>
 
 </div>
-
-        <p className="text-sm text-slate-500 mb-3">
-          Daftar pejabat berikut memerlukan tindak lanjut percepatan sertifikasi.
-        </p>
-
-        {klDetail.prioritas &&
-        klDetail.prioritas.length >
-          0 ? (
-
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-
-            <div className="grid grid-cols-12 bg-slate-100 px-4 py-3 text-xs font-semibold text-slate-600 uppercase">
-
-              <div className="col-span-3">
-                Nama
-              </div>
-
-              <div className="col-span-3">
-                Jabatan
-              </div>
-
-              <div className="col-span-4">
-                Satker
-              </div>
-
-              <div className="col-span-2">
-                Status
-              </div>
-
-            </div>
-
-            <div className="divide-y divide-slate-100">
-
-              {klDetail.prioritas.map(
-                (
-                  item: any,
-                  index: number
-                ) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-12 px-4 py-3 text-sm hover:bg-slate-50"
-                  >
-                    <div className="col-span-3 font-medium text-slate-900">
-                      {item.NAMA}
-                    </div>
-
-                    <div className="col-span-3 text-slate-700">
-                      {item.NMJABATAN}
-                    </div>
-
-                    <div className="col-span-4 text-slate-700">
-                      {item.NMSATKER}
-                    </div>
-
-                    <div className="col-span-2">
-                      <span className="text-xs px-2 py-1 rounded-full bg-red-50 text-red-700 font-semibold">
-                        {item.STSUSULAN}
-                      </span>
-                    </div>
-                  </div>
-                )
-              )}
-
-            </div>
-          </div>
-
-        ) : (
-
-          <div className="bg-slate-50 rounded-2xl p-4 text-sm text-slate-500">
-            Tidak terdapat data prioritas tindak lanjut.
-          </div>
-
-        )}
-
-      </div>
 
     </div>
   </div>
@@ -1142,7 +1101,7 @@ function RankingCard({
             </div>
 
             <span className="font-bold text-slate-900">
-              {item.jumlah}
+              {formatNumber(item.jumlah)}
             </span>
           </div>
         ))}

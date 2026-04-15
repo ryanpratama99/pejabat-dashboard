@@ -103,18 +103,17 @@ export async function GET(req: NextRequest) {
 
     // Prioritas
     const {
-      data: prioritas,
-    } = await supabase
-      .from("pejabat")
-      .select(
-        "NAMA, NMJABATAN, NMSATKER, STSUSULAN"
-      )
-      .eq("NAMA_KL", nama)
-      .in("STSUSULAN", [
-        "Belum rekam usulan",
-        "Sertifikat Kadaluarsa",
-      ])
-      .limit(20);
+  data: prioritas,
+} = await supabase
+  .from("pejabat")
+  .select(
+    "NAMA, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
+  )
+  .eq("NAMA_KL", nama)
+  .eq(
+    "STSCERT",
+    "Belum Tersertifikasi"
+  );
 
     return NextResponse.json({
       nama,

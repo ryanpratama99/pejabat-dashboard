@@ -84,14 +84,13 @@ export async function GET(req: NextRequest) {
   await supabase
     .from("pejabat")
     .select(
-      "NAMA, NMJABATAN, NMSATKER, STSUSULAN"
+      "NAMA, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
     )
     .eq("NMKPPN", nama)
-    .in("STSUSULAN", [
-      "Belum rekam usulan",
-      "Sertifikat Kadaluarsa",
-    ])
-    .limit(20);
+    .eq(
+      "STSCERT",
+      "Belum Tersertifikasi"
+    );
 
 const prioritas =
   prioritasRaw || [];
