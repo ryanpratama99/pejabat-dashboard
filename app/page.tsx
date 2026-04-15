@@ -22,6 +22,14 @@ type RankItem = {
   jumlah: number;
 };
 
+  const formatNumber = (
+  value: number
+) => {
+  return new Intl.NumberFormat(
+    "id-ID"
+  ).format(value || 0);
+};
+
 export default function Home() {
   const [total, setTotal] = useState(0);
   const [sertifikasi, setSertifikasi] = useState(0);
@@ -78,6 +86,7 @@ export default function Home() {
         setKlOptions(data.kl || []);
       });
   }, []);
+
 
   const openKppnDetail = async (
   nama: string
@@ -205,13 +214,6 @@ const exportKlPrioritasExcel = () => {
   );
 };
 
-const formatNumber = (
-  value: number
-) => {
-  return new Intl.NumberFormat(
-    "id-ID"
-  ).format(value || 0);
-};
 
   return (
     <main className="min-h-screen bg-slate-100 p-8">
