@@ -130,21 +130,14 @@ const exportKlPrioritasExcel = () => {
   const rows =
   klDetail.prioritas.map(
     (item: any) => ({
+      NIP: item.NIP,
       Nama: item.NAMA,
-      Jabatan:
-        item.NMJABATAN,
-      Satker:
-        item.NMSATKER,
-      "Status Sertifikasi":
-        item.STSCERT,
-      "Status Usulan":
-        item.STSUSULAN,
-      "K/L":
-        klDetail.nama,
-      "Tanggal Download":
-        new Date().toLocaleString(
-          "id-ID"
-        ),
+      Jabatan: item.NMJABATAN,
+      Satker: item.NMSATKER,
+      "Status Sertifikasi": item.STSCERT,
+      "Status Usulan": item.STSUSULAN,
+      "K/L": klDetail.nama,
+      "Tanggal Download": new Date().toLocaleString("id-ID"),
     })
   );
 
@@ -176,23 +169,18 @@ const exportKlPrioritasExcel = () => {
     return;
 
   const rows =
-    kppnDetail.prioritas.map(
-      (item: any) => ({
-        Nama: item.NAMA,
-        Jabatan:
-          item.NMJABATAN,
-        Satker:
-          item.NMSATKER,
-        Status:
-          item.STSUSULAN,
-        KPPN:
-          kppnDetail.nama,
-        "Tanggal Download":
-          new Date().toLocaleString(
-            "id-ID"
-          ),
-      })
-    );
+  kppnDetail.prioritas.map(
+    (item: any) => ({
+      NIP: item.NIP,
+      Nama: item.NAMA,
+      Jabatan: item.NMJABATAN,
+      Satker: item.NMSATKER,
+      "Status Sertifikasi": item.STSCERT,
+      "Status Usulan": item.STSUSULAN,
+      KPPN: kppnDetail.nama,
+      "Tanggal Download": new Date().toLocaleString("id-ID"),
+    })
+  );
 
   const ws =
     XLSX.utils.json_to_sheet(

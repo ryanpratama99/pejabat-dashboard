@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
   await supabase
     .from("pejabat")
     .select(
-      "NAMA, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
+      "NAMA, NIP, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
     )
     .eq("NMKPPN", nama)
     .eq(
