@@ -21,6 +21,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Normalisasi input
+    const cleanNama = nama
+      .trim()
+      .replace(/\s+/g, " ");
+
+    const keyword = `%${cleanNama}%`;
+
     // KPI
     const { count: total } =
       await supabase
@@ -29,7 +36,10 @@ export async function GET(req: NextRequest) {
           count: "exact",
           head: true,
         })
-        .eq("NAMA_KL", nama);
+        .ilike(
+          "NAMA_KL",
+          keyword
+        );
 
     const {
       count: sertifikasi,
@@ -39,7 +49,10 @@ export async function GET(req: NextRequest) {
         count: "exact",
         head: true,
       })
-      .eq("NAMA_KL", nama)
+      .ilike(
+        "NAMA_KL",
+        keyword
+      )
       .eq(
         "STSCERT",
         "Tersertifikasi"
@@ -52,7 +65,10 @@ export async function GET(req: NextRequest) {
           count: "exact",
           head: true,
         })
-        .eq("NAMA_KL", nama)
+        .ilike(
+          "NAMA_KL",
+          keyword
+        )
         .eq(
           "STSCERT",
           "Belum Tersertifikasi"
@@ -63,7 +79,10 @@ export async function GET(req: NextRequest) {
       await supabase
         .from("pejabat")
         .select("STSUSULAN")
-        .eq("NAMA_KL", nama)
+        .ilike(
+          "NAMA_KL",
+          keyword
+        )
         .eq(
           "STSCERT",
           "Belum Tersertifikasi"
@@ -78,6 +97,7 @@ export async function GET(req: NextRequest) {
       (row: any) => {
         const key =
           row.STSUSULAN;
+
         if (!key) return;
 
         group[key] =
@@ -103,20 +123,23 @@ export async function GET(req: NextRequest) {
 
     // Prioritas
     const {
-  data: prioritas,
-} = await supabase
-  .from("pejabat")
-  .select(
-    "NAMA, NIP, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
-  )
-  .eq("NAMA_KL", nama)
-  .eq(
-    "STSCERT",
-    "Belum Tersertifikasi"
-  );
+      data: prioritas,
+    } = await supabase
+      .from("pejabat")
+      .select(
+        "NAMA, NIP, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
+      )
+      .ilike(
+        "NAMA_KL",
+        keyword
+      )
+      .eq(
+        "STSCERT",
+        "Belum Tersertifikasi"
+      );
 
     return NextResponse.json({
-      nama,
+      nama: cleanNama,
       total: total || 0,
       sertifikasi:
         sertifikasi || 0,

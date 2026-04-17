@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Users,
   BadgeCheck,
@@ -16,6 +16,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import * as XLSX from "xlsx";
+import LoadingScreen from "./components/LoadingScreen";
 
 type RankItem = {
   nama: string;
@@ -48,6 +49,14 @@ export default function Home() {
   const [showKlModal, setShowKlModal] = useState(false);
   const [klDetail, setKlDetail] = useState<any>(null);
   const [jabatanData, setJabatanData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchKppn, setSearchKppn] = useState("");
+  const [showKppnSearch, setShowKppnSearch] = useState(false);
+  const [searchKl, setSearchKl] = useState("");
+  const [showKlSearch, setShowKlSearch] = useState(false);
+  const kppnRef = useRef<HTMLDivElement>(null);
+const klRef = useRef<HTMLDivElement>(null);
+const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -85,38 +94,87 @@ export default function Home() {
         setKppnOptions(data.kppn || []);
         setKlOptions(data.kl || []);
       });
+    setTimeout(() => {
+  setLoading(false);
+}, 1200);
+
   }, []);
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    const target = event.target as Node;
+
+    if (
+      kppnRef.current &&
+      !kppnRef.current.contains(target)
+    ) {
+      setShowKppnSearch(false);
+    }
+
+    if (
+      klRef.current &&
+      !klRef.current.contains(target)
+    ) {
+      setShowKlSearch(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+  };
+}, []);
 
 
   const openKppnDetail = async (
   nama: string
-    ) => {
-  const res = await fetch(
-    `/api/kppn-detail?nama=${encodeURIComponent(
-      nama
-    )}`
-  );
+) => {
+  setDetailLoading(true);
 
+  try {
+    const res = await fetch(
+      `/api/kppn-detail?nama=${encodeURIComponent(
+        nama
+      )}`
+    );
 
-  const data = await res.json();
+    const data =
+      await res.json();
 
-  setKppnDetail(data);
-  setShowKppnModal(true);
-  };
+    setKppnDetail(data);
+    setShowKppnModal(true);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setDetailLoading(false);
+  }
+};
 
   const openKlDetail = async (
   nama: string
 ) => {
-  const res = await fetch(
-    `/api/kl-detail?nama=${encodeURIComponent(
-      nama
-    )}`
-  );
+  setDetailLoading(true);
 
-  const data = await res.json();
+  try {
+    const res = await fetch(
+      `/api/kl-detail?nama=${encodeURIComponent(
+        nama
+      )}`
+    );
 
-  setKlDetail(data);
-  setShowKlModal(true);
+    const data =
+      await res.json();
+
+    setKlDetail(data);
+    setShowKlModal(true);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setDetailLoading(false);
+  }
 };
 
 const exportKlPrioritasExcel = () => {
@@ -202,9 +260,16 @@ const exportKlPrioritasExcel = () => {
   );
 };
 
+if (loading) {
+  return <LoadingScreen />;
+}
 
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
+  <main className="min-h-screen bg-slate-100 p-8">
+
+    {detailLoading && <LoadingScreen />}
+
+    {/* HEADER */}
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-8 gap-4">
         <div>
@@ -507,32 +572,43 @@ const exportKlPrioritasExcel = () => {
         Top 5 KPPN Belum Tersertifikasi
       </h2>
 
-      <select
-        value={selectedKppn}
-        onChange={(e) => {
-          const value = e.target.value;
+      <div ref={kppnRef} className="relative w-[260px]">
+  <input
+    type="text"
+    placeholder="Cari KPPN..."
+    value={searchKppn}
+    onFocus={() => setShowKppnSearch(true)}
+    onChange={(e) => {
+      setSearchKppn(e.target.value);
+      setShowKppnSearch(true);
+    }}
+    className="w-full border rounded-xl px-3 py-2 text-sm"
+  />
 
-          setSelectedKppn(value);
-
-          if (value) {
-            openKppnDetail(value);
-          }
-        }}
-        className="border rounded-xl px-3 py-2 text-sm"
-      >
-        <option value="">
-          Pilih KPPN
-        </option>
-
-        {kppnOptions.map((item) => (
-          <option
+  {showKppnSearch && (
+    <div className="absolute top-full mt-2 w-full bg-white border rounded-2xl shadow-lg max-h-60 overflow-auto z-50">
+      {kppnOptions
+        .filter((item) =>
+          item.toLowerCase().includes(searchKppn.toLowerCase())
+        )
+        .slice(0, 20)
+        .map((item) => (
+          <div
             key={item}
-            value={item}
+            onClick={() => {
+              setSelectedKppn(item);
+              setSearchKppn(item);
+              setShowKppnSearch(false);
+              openKppnDetail(item);
+            }}
+            className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-sm"
           >
             {item}
-          </option>
+          </div>
         ))}
-      </select>
+    </div>
+  )}
+</div>
     </div>
 
     <div className="space-y-3">
@@ -570,31 +646,43 @@ const exportKlPrioritasExcel = () => {
     Top 5 K/L Belum Tersertifikasi
   </h2>
 
-  <select
-    value={selectedKl}
+  <div ref={klRef} className="relative w-full md:w-[55%]">
+  <input
+    type="text"
+    placeholder="Cari K/L..."
+    value={searchKl}
+    onFocus={() => setShowKlSearch(true)}
     onChange={(e) => {
-      const value = e.target.value;
-      setSelectedKl(value);
-
-      if (value) {
-        openKlDetail(value);
-      }
+      setSearchKl(e.target.value);
+      setShowKlSearch(true);
     }}
-    className="border rounded-xl px-3 py-2 text-sm w-full md:w-[55%]"
-  >
-    <option value="">
-      Pilih K/L
-    </option>
+    className="w-full border rounded-xl px-3 py-2 text-sm"
+  />
 
-    {klOptions.map((item) => (
-      <option
-        key={item}
-        value={item}
-      >
-        {item}
-      </option>
-    ))}
-  </select>
+  {showKlSearch && (
+    <div className="absolute top-full mt-2 w-full bg-white border rounded-2xl shadow-lg max-h-60 overflow-auto z-50">
+      {klOptions
+        .filter((item) =>
+          item.toLowerCase().includes(searchKl.toLowerCase())
+        )
+        .slice(0, 20)
+        .map((item) => (
+          <div
+            key={item}
+            onClick={() => {
+              setSelectedKl(item);
+              setSearchKl(item);
+              setShowKlSearch(false);
+              openKlDetail(item);
+            }}
+            className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-sm"
+          >
+            {item}
+          </div>
+        ))}
+    </div>
+  )}
+</div>
 
 </div>
 

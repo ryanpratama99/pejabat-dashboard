@@ -16,6 +16,10 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  const cleanNama = nama
+    .trim()
+    .replace(/\s+/g, " ");
+
   const { count: total } =
     await supabase
       .from("pejabat")
@@ -23,7 +27,7 @@ export async function GET(req: NextRequest) {
         count: "exact",
         head: true,
       })
-      .eq("NMKPPN", nama);
+      .ilike("NMKPPN", `%${nama.trim()}%`);
 
   const { count: sertifikasi } =
     await supabase
@@ -32,7 +36,7 @@ export async function GET(req: NextRequest) {
         count: "exact",
         head: true,
       })
-      .eq("NMKPPN", nama)
+      .ilike("NMKPPN", `%${nama.trim()}%`)
       .eq(
         "STSCERT",
         "Tersertifikasi"
@@ -45,7 +49,7 @@ export async function GET(req: NextRequest) {
         count: "exact",
         head: true,
       })
-      .eq("NMKPPN", nama)
+      .ilike("NMKPPN", `%${nama.trim()}%`)
       .eq(
         "STSCERT",
         "Belum Tersertifikasi"
@@ -55,7 +59,7 @@ export async function GET(req: NextRequest) {
     await supabase
       .from("pejabat")
       .select("STSUSULAN")
-      .eq("NMKPPN", nama)
+      .ilike("NMKPPN", `%${nama.trim()}%`)
       .eq(
         "STSCERT",
         "Belum Tersertifikasi"
@@ -86,7 +90,7 @@ export async function GET(req: NextRequest) {
     .select(
       "NAMA, NIP, NMJABATAN, NMSATKER, STSCERT, STSUSULAN"
     )
-    .eq("NMKPPN", nama)
+    .ilike("NMKPPN", `%${nama.trim()}%`)
     .eq(
       "STSCERT",
       "Belum Tersertifikasi"
